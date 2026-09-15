@@ -38,127 +38,130 @@ export async function sendActivationEmail(order: Order): Promise<{
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #f6f8fa;
+      background-color: #f4f7f6;
       color: #1a1a1a;
       -webkit-font-smoothing: antialiased;
     }
     .wrapper {
       width: 100%;
-      background-color: #f6f8fa;
-      padding: 30px 15px;
+      background-color: #f4f7f6;
+      padding: 40px 15px;
     }
     .container {
       max-width: 600px;
       margin: 0 auto;
       background-color: #ffffff;
-      border-radius: 18px;
+      border-radius: 24px;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      border: 1px solid #eaeaea;
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
+      border: 1px solid #f0f0f0;
     }
     .header {
-      padding: 30px 35px 24px;
+      padding: 40px 35px 30px;
       text-align: center;
+      background: linear-gradient(to bottom, #ffffff, #fcfcfc);
       border-bottom: 1px solid #f0f0f0;
-      background-color: #ffffff;
     }
     .brand-logo {
-      max-height: 48px;
+      max-height: 54px;
       width: auto;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       display: inline-block;
     }
     .brand-name {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 900;
-      letter-spacing: 4px;
-      color: #0a0a0a;
+      letter-spacing: 5px;
+      color: #000000;
       margin: 0;
       text-transform: uppercase;
     }
     .brand-sub {
-      font-size: 11px;
-      color: #888888;
-      letter-spacing: 1.5px;
+      font-size: 12px;
+      color: #666666;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      margin-top: 4px;
+      margin-top: 6px;
+      font-weight: 500;
     }
     .badge-status {
       display: inline-block;
-      background-color: #ecfdf5;
-      color: #047857;
-      border: 1px solid #a7f3d0;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
+      background-color: #e6f7ec;
+      color: #036b45;
+      border: 1px solid #b7ecd0;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 13px;
       font-weight: 700;
-      margin-top: 16px;
+      margin-top: 20px;
+      letter-spacing: 0.5px;
     }
     .content {
-      padding: 30px 35px;
+      padding: 40px 35px;
     }
     .greeting {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
-      color: #111111;
+      color: #000000;
       margin-top: 0;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .intro-p {
-      font-size: 14px;
-      line-height: 1.6;
-      color: #4b5563;
-      margin-bottom: 24px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #4a5568;
+      margin-bottom: 28px;
     }
     .order-box {
-      background-color: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 20px;
-      margin-bottom: 25px;
+      background-color: #fafafa;
+      border: 1px solid #f0f0f0;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 28px;
     }
     .order-title {
       font-size: 12px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #6b7280;
-      margin-bottom: 12px;
+      letter-spacing: 1.5px;
+      color: #888888;
+      margin-bottom: 16px;
     }
     .item-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px dashed #e5e7eb;
-      font-size: 14px;
+      padding: 12px 0;
+      border-bottom: 1px dashed #e2e8f0;
+      font-size: 15px;
     }
     .item-row:last-child {
       border-bottom: none;
     }
     .item-name {
       font-weight: 700;
-      color: #111827;
+      color: #1a202c;
     }
     .item-duration {
-      font-size: 12px;
-      color: #6b7280;
-      font-weight: normal;
+      font-size: 13px;
+      color: #718096;
+      font-weight: 500;
+      margin-left: 4px;
     }
     .item-price {
       font-weight: 800;
-      color: #111827;
+      color: #1a202c;
     }
     .total-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 14px;
-      margin-top: 8px;
-      border-top: 2px solid #e5e7eb;
-      font-size: 16px;
+      padding-top: 16px;
+      margin-top: 10px;
+      border-top: 2px solid #edf2f7;
+      font-size: 18px;
       font-weight: 900;
-      color: #111827;
+      color: #000000;
     }
     .cta-box {
       background: linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%);
@@ -401,11 +404,11 @@ Link Akses: ${emailActivationLink}</div>
       },
     });
 
-    const logoPath = path.join(process.cwd(), "public", "images", "logo12.png");
+    const logoPath = path.join(process.cwd(), "public", "images", "logo13.png");
     const attachments = [];
     if (fs.existsSync(logoPath)) {
       attachments.push({
-        filename: "logo12.png",
+        filename: "logo13.png",
         path: logoPath,
         cid: "digitara_logo",
       });
