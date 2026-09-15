@@ -1,0 +1,101 @@
+[
+  {
+    "orderId": "DIGI-368669",
+    "buyerName": "60_I WAYAN KRISNA PRADIPA ARIBAWA SAPUTRA",
+    "buyerEmail": "kedoel69@gmail.com",
+    "buyerWhatsapp": "081339711438",
+    "items": [
+      {
+        "id": "gemini-pro",
+        "name": "Google Gemini Pro",
+        "duration": "18 Bulan",
+        "price": 50000,
+        "image": "/images/assetgemini1.png",
+        "quantity": 1
+      }
+    ],
+    "baseAmount": 50000,
+    "uniqueCode": 0,
+    "totalAmount": 50000,
+    "paymentMethod": "qris",
+    "status": "PAID",
+    "activationLink": "https://lapakdigitara.com/redeem/digi-368669",
+    "createdAt": "2026-09-15T09:43:39.585Z",
+    "emailSent": true,
+    "paidAt": "2026-09-15T09:43:49.803Z"
+  },
+  {
+    "orderId": "DIGI-991715",
+    "buyerName": "60_I WAYAN KRISNA PRADIPA ARIBAWA SAPUTRA",
+    "buyerEmail": "kedoel69@gmail.com",
+    "buyerWhatsapp": "081339711438",
+    "items": [
+      {
+        "id": "chatgpt-plus",
+        "name": "ChatGPT Plus",
+        "duration": "1 Bulan",
+        "price": 125000,
+        "image": "/images/assetchatgpt1.png",
+        "quantity": 1
+      }
+    ],
+    "baseAmount": 125000,
+    "uniqueCode": 0,
+    "totalAmount": 125000,
+    "paymentMethod": "qris",
+    "status": "PENDING",
+    "activationLink": "https://lapakdigitara.com/redeem/digi-991715",
+    "createdAt": "2026-09-15T09:36:18.073Z",
+    "emailSent": false
+  },
+  {
+    "orderId": "DIGI-971353",
+    "buyerName": "60_I WAYAN KRISNA PRADIPA ARIBAWA SAPUTRA",
+    "buyerEmail": "kedoel69@gmail.com",
+    "buyerWhatsapp": "081339711438",
+    "items": [
+      {
+        "id": "gemini-pro",
+        "name": "Google Gemini Pro",
+        "duration": "18 Bulan",
+        "price": 50000,
+        "image": "/images/assetgemini1.png",
+        "quantity": 1
+      }
+    ],
+    "baseAmount": 50000,
+    "uniqueCode": 633,
+    "totalAmount": 50633,
+    "paymentMethod": "qris",
+    "status": "PAID",
+    "activationLink": "https://lapakdigitara.com/redeem/digi-971353",
+    "createdAt": "2026-09-15T09:24:27.061Z",
+    "emailSent": true,
+    "paidAt": "2026-09-15T09:25:22.683Z"
+  },
+  {
+    "orderId": "DIGI-176194",
+    "buyerName": "Krisna Moota Test",
+    "buyerEmail": "hellodip16@gmail.com",
+    "buyerWhatsapp": "08123456789",
+    "items": [
+      {
+        "id": "gemini-pro",
+        "name": "Google Gemini Pro",
+        "duration": "18 Bulan",
+        "price": 50000,
+        "image": "/images/assetgemini1.png",
+        "quantity": 1
+      }
+    ],
+    "baseAmount": 50000,
+    "uniqueCode": 747,
+    "totalAmount": 50747,
+    "paymentMethod": "qris",
+    "status": "PAID",
+    "activationLink": "https://lapakdigitara.com/redeem/digi-176194",
+    "createdAt": "2026-09-15T09:04:33.667Z",
+    "emailSent": true,
+    "paidAt": "2026-09-15T09:04:33.945Z"
+  }
+]
