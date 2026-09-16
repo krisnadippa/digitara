@@ -2,9 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import path from "path";
 import fs from "fs";
+import { isAuthenticatedAdmin } from "@/lib/auth";
+
+function escapeHtml(str: unknown): string {
+  if (typeof str !== "string") return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const isAuth = await isAuthenticatedAdmin();
+    if (!isAuth) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Silakan login admin terlebih dahulu." },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
       buyerName,

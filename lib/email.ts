@@ -3,12 +3,27 @@ import path from "path";
 import fs from "fs";
 import { Order } from "./orders";
 
+function escapeHtml(str: unknown): string {
+  if (typeof str !== "string") return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export async function sendActivationEmail(order: Order): Promise<{
   success: boolean;
   emailSent: boolean;
   message: string;
   previewHtml: string;
 }> {
+  const safeBuyerName = escapeHtml(order.buyerName) || "Pelanggan Setia";
+  const safeOrderId = escapeHtml(order.orderId);
+  const safeBuyerEmail = escapeHtml(order.buyerEmail);
+  const safeBuyerWhatsapp = escapeHtml(order.buyerWhatsapp);
+
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -32,7 +47,7 @@ export async function sendActivationEmail(order: Order): Promise<{
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Link Aktivasi Pesanan #${order.orderId}</title>
+  <title>Link Aktivasi Pesanan #${safeOrderId}</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -286,21 +301,21 @@ export async function sendActivationEmail(order: Order): Promise<{
 
       <!-- Main Content -->
       <div class="content">
-        <h2 class="greeting">Halo, ${order.buyerName || "Pelanggan Setia"}!</h2>
+        <h2 class="greeting">Halo, ${safeBuyerName}!</h2>
         <p class="intro-p">
           Terima kasih banyak telah berbelanja di <strong>Lapak Digitara</strong>. Pembayaran Anda telah <strong>berhasil diverifikasi otomatis</strong> dan link aktivasi sudah siap digunakan.
         </p>
 
         <!-- Order Summary -->
         <div class="order-box">
-          <div class="order-title">Rincian Pembelian (Order #${order.orderId})</div>
+          <div class="order-title">Rincian Pembelian (Order #${safeOrderId})</div>
           ${order.items
             .map(
               (it) => `
             <div class="item-row">
               <div>
-                <span class="item-name">${it.name}</span>
-                <span class="item-duration">(${it.duration || "1 Lisensi"}) x${it.quantity}</span>
+                <span class="item-name">${escapeHtml(it.name)}</span>
+                <span class="item-duration">(${escapeHtml(it.duration) || "1 Lisensi"}) x${Number(it.quantity) || 1}</span>
               </div>
               <span class="item-price">${formatRupiah(it.price * it.quantity)}</span>
             </div>
@@ -350,11 +365,11 @@ export async function sendActivationEmail(order: Order): Promise<{
 
           <div style="margin-top: 16px;">
             <strong style="font-size: 12px; color: #475569; text-transform: uppercase;">Format Catatan Pesanan:</strong>
-            <div class="chat-format">Order ID: #${order.orderId}
-Produk: ${order.items.map((i) => `${i.name} (x${i.quantity})`).join(", ")}
+            <div class="chat-format">Order ID: #${safeOrderId}
+Produk: ${order.items.map((i) => `${escapeHtml(i.name)} (x${i.quantity})`).join(", ")}
 Status: LUNAS & AKTIF (VERIFIKASI OTOMATIS)
-Email Penerima: ${order.buyerEmail}
-WhatsApp: ${order.buyerWhatsapp || "-"}
+Email Penerima: ${safeBuyerEmail}
+WhatsApp: ${safeBuyerWhatsapp || "-"}
 Link Akses: ${emailActivationLink}</div>
           </div>
         </div>
@@ -384,14 +399,24 @@ Link Akses: ${emailActivationLink}</div>
 </html>
   `;
 
-  // SMTP Settings
+  // SMTP Settings dari Environment Variable
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
   const smtpPort = Number(process.env.SMTP_PORT) || 465;
-  const smtpUser = process.env.SMTP_USER || "hellodip16@gmail.com";
-  const smtpPass = process.env.SMTP_PASS || "vjsgjhmpujjwoiov";
-  const smtpFrom = process.env.SMTP_FROM || `"Lapak Digitara" <${smtpUser}>`;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpFrom = process.env.SMTP_FROM || (smtpUser ? `"Lapak Digitara" <${smtpUser}>` : `"Lapak Digitara" <order@lapakdigitara.com>`);
 
   let emailSent = false;
+
+  if (!smtpUser || !smtpPass) {
+    console.warn("[Email Service] SMTP_USER atau SMTP_PASS belum diset di environment. Email simulasi.");
+    return {
+      success: true,
+      emailSent: false,
+      message: `Simulasi email berhasil (SMTP belum dikonfigurasi).`,
+      previewHtml: emailHtml,
+    };
+  }
 
   try {
     const transporter = nodemailer.createTransport({

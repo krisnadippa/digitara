@@ -39,7 +39,7 @@ export default function CheckoutClient() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"qris" | "bca">("qris");
+  const paymentMethod = "qris";
 
   // Step flow: 'form' -> 'payment' -> 'waiting' -> 'success'
   const [step, setStep] = useState<"form" | "payment" | "waiting" | "success">("form");
@@ -376,42 +376,20 @@ export default function CheckoutClient() {
                     <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-2.5">
                       Metode Pembayaran
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* QRIS DANA */}
-                      <div
-                        onClick={() => setPaymentMethod("qris")}
-                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-3 ${
-                          paymentMethod === "qris"
-                            ? "border-neutral-950 bg-neutral-50/80 shadow-xs"
-                            : "border-neutral-200 hover:border-neutral-300 bg-white"
-                        }`}
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-neutral-900 text-white flex items-center justify-center shrink-0">
+                    <div className="p-3.5 rounded-2xl border-2 border-neutral-950 bg-neutral-50/80 shadow-xs flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center shrink-0 shadow-xs">
                           <QrCode className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-neutral-950">QRIS DANA</div>
-                          <div className="text-[10px] text-neutral-500">Scan via DANA / Semua Bank</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-neutral-950">QRIS Resmi (DANA & Semua Bank)</span>
+                            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Aktif</span>
+                          </div>
+                          <div className="text-[11px] text-neutral-500">Scan via DANA, GoPay, OVO, ShopeePay, BCA, Mandiri, BRI, & Mobile Banking</div>
                         </div>
                       </div>
-
-                      {/* Bank Transfer */}
-                      <div
-                        onClick={() => setPaymentMethod("bca")}
-                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-3 ${
-                          paymentMethod === "bca"
-                            ? "border-neutral-950 bg-neutral-50/80 shadow-xs"
-                            : "border-neutral-200 hover:border-neutral-300 bg-white"
-                        }`}
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-neutral-100 text-neutral-800 flex items-center justify-center shrink-0 border border-neutral-200">
-                          <CreditCard className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-neutral-950">Transfer Bank</div>
-                          <div className="text-[10px] text-neutral-500">BCA, Mandiri, BNI</div>
-                        </div>
-                      </div>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                     </div>
                   </div>
 

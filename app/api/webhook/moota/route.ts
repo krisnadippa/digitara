@@ -18,18 +18,24 @@ export async function POST(req: NextRequest) {
     const rawBody = await req.text();
     const signature = req.headers.get("signature");
 
-    // Optional HMAC Signature Verification
+    // Wajib verifikasi HMAC Signature untuk keamanan
     const secret = process.env.MOOTA_WEBHOOK_SECRET;
-    if (secret && signature) {
-      const computedHash = crypto
-        .createHmac("sha256", secret)
-        .update(rawBody)
-        .digest("hex");
+    if (!secret || !signature) {
+      console.warn("[Moota Webhook] Unauthorized: Missing webhook secret or signature header.");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-      if (computedHash !== signature) {
-        console.warn("Moota Webhook: Invalid Signature rejected.");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-      }
+    const computedHash = crypto
+      .createHmac("sha256", secret)
+      .update(rawBody)
+      .digest("hex");
+
+    const computedBuf = Buffer.from(computedHash, "utf-8");
+    const sigBuf = Buffer.from(signature, "utf-8");
+
+    if (computedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(computedBuf, sigBuf)) {
+      console.warn("[Moota Webhook] Invalid Signature rejected.");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     let parsedBody: any;
