@@ -127,8 +127,10 @@ export async function createOrder(data: {
   items: OrderItem[];
   baseAmount: number;
   paymentMethod: string;
+  discountAmount?: number;
 }): Promise<Order> {
-  const totalAmount = data.baseAmount;
+  const discount = Math.max(0, Number(data.discountAmount || 0));
+  const totalAmount = Math.max(0, data.baseAmount - discount);
   const uniqueCode = 0;
   const orderId = "DIGI-" + Math.floor(100000 + Math.random() * 900000);
   const activationLink = `https://lapakdigitara.com/redeem/${orderId.toLowerCase()}`;

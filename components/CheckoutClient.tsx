@@ -26,7 +26,12 @@ import {
   AlertTriangle,
   Clock,
   MessageCircle,
+  Tag,
+  Percent,
+  History,
+  Download,
 } from "lucide-react";
+import { saveUserOrder, updateUserOrderStatus } from "@/lib/userHistory";
 
 export default function CheckoutClient() {
   const searchParams = useSearchParams();
@@ -40,6 +45,16 @@ export default function CheckoutClient() {
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const paymentMethod = "qris";
+
+  // Coupon / Discount State
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string;
+    name: string;
+    amount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   // Step flow: 'form' -> 'payment' -> 'waiting' -> 'success'
   const [step, setStep] = useState<"form" | "payment" | "waiting" | "success">("form");
@@ -57,6 +72,8 @@ export default function CheckoutClient() {
 
   const [copiedNominal, setCopiedNominal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [downloadingQris, setDownloadingQris] = useState(false);
+  const [downloadQrisSuccess, setDownloadQrisSuccess] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [emailPreviewHtml, setEmailPreviewHtml] = useState<string | null>(null);
 
@@ -96,6 +113,42 @@ export default function CheckoutClient() {
     }).format(num);
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setIsApplyingCoupon(true);
+    setCouponError(null);
+    try {
+      const res = await fetch("/api/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim(), baseAmount }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedDiscount({
+          code: data.discount.code,
+          name: data.discount.name,
+          amount: data.discountAmount,
+        });
+        setCouponInput("");
+      } else {
+        setCouponError(data.error || "Kupon diskon tidak valid.");
+      }
+    } catch (e) {
+      setCouponError("Terjadi gangguan jaringan saat cek kupon.");
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedDiscount(null);
+    setCouponError(null);
+  };
+
+  const discountAmount = appliedDiscount?.amount || 0;
+  const finalTotalAmount = Math.max(0, baseAmount - discountAmount);
+
   // Submit Form & Create Order with 3-Digit Unique Code on Server
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +173,7 @@ export default function CheckoutClient() {
           items: checkoutItems,
           baseAmount,
           paymentMethod,
+          discountCode: appliedDiscount?.code,
         }),
       });
 
@@ -132,6 +186,21 @@ export default function CheckoutClient() {
           totalAmount: data.order.totalAmount,
           activationLink: data.order.activationLink,
         });
+
+        // Simpan ke riwayat localStorage pembeli
+        saveUserOrder({
+          orderId: data.order.orderId,
+          buyerName: name,
+          buyerEmail: email,
+          buyerWhatsapp: whatsapp,
+          items: checkoutItems,
+          baseAmount: data.order.baseAmount,
+          totalAmount: data.order.totalAmount,
+          paymentMethod: "qris",
+          status: "PENDING",
+          activationLink: data.order.activationLink,
+        });
+
         setStep("payment");
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
@@ -166,6 +235,7 @@ export default function CheckoutClient() {
           if (data.status === "PAID") {
             setStep("success");
             clearCart();
+            updateUserOrderStatus(currentOrder.orderId, "PAID", data.activationLink);
             window.scrollTo({ top: 0, behavior: "smooth" });
             return;
           }
@@ -214,11 +284,13 @@ export default function CheckoutClient() {
       });
       const data = await res.json();
       if (data.success) {
+        updateUserOrderStatus(currentOrder.orderId, "WAITING_CONFIRMATION");
         setStep("waiting");
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch (e) {
       console.error(e);
+      updateUserOrderStatus(currentOrder.orderId, "WAITING_CONFIRMATION");
       setStep("waiting");
     } finally {
       setIsConfirmingToAdmin(false);
@@ -238,6 +310,29 @@ export default function CheckoutClient() {
       navigator.clipboard.writeText(currentOrder.activationLink);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
+  const handleDownloadQris = async () => {
+    setDownloadingQris(true);
+    try {
+      const response = await fetch("/images/qris.png");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `QRIS-LapakDigitara-${currentOrder?.orderId || "Payment"}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      setDownloadQrisSuccess(true);
+      setTimeout(() => setDownloadQrisSuccess(false), 3500);
+    } catch (err) {
+      console.error("Gagal download QRIS:", err);
+      window.open("/images/qris.png", "_blank");
+    } finally {
+      setDownloadingQris(false);
     }
   };
 
@@ -458,19 +553,84 @@ export default function CheckoutClient() {
                   </div>
                 )}
 
+                {/* Kupon Diskon Promo Input */}
+                <div className="pt-3 pb-4 border-t border-neutral-100">
+                  <span className="text-xs font-bold text-neutral-700 block mb-2">
+                    Kupon / Kode Promo Diskon
+                  </span>
+                  {appliedDiscount ? (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-emerald-700" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-black text-xs text-emerald-950">
+                              {appliedDiscount.code}
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
+                              Terapkan
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-emerald-800 font-medium">
+                            Hemat {formatRupiah(appliedDiscount.amount)}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
+                          placeholder="Masukkan kode kupon (mis: DIGIBARU)"
+                          className="flex-1 px-3 py-2 rounded-xl border border-neutral-200 text-xs font-mono font-bold text-neutral-900 focus:outline-hidden focus:border-neutral-950 bg-neutral-50/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={isApplyingCoupon || !couponInput.trim()}
+                          className="px-4 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-bold transition-all disabled:opacity-50 shrink-0 cursor-pointer"
+                        >
+                          {isApplyingCoupon ? "Cek..." : "Gunakan"}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <p className="text-[11px] text-rose-600 font-semibold">{couponError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Subtotal & Total */}
-                <div className="pt-4 border-t border-neutral-100 space-y-2 text-xs">
+                <div className="pt-3 border-t border-neutral-100 space-y-2 text-xs">
                   <div className="flex justify-between text-neutral-500">
                     <span>Subtotal Produk</span>
                     <span className="font-semibold text-neutral-900">{formatRupiah(baseAmount)}</span>
                   </div>
+                  {appliedDiscount && (
+                    <div className="flex justify-between text-emerald-700 font-bold">
+                      <span className="flex items-center gap-1">
+                        <Tag className="w-3.5 h-3.5" />
+                        <span>Diskon Kupon ({appliedDiscount.code})</span>
+                      </span>
+                      <span>-{formatRupiah(appliedDiscount.amount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-neutral-500">
                     <span>Biaya Pengiriman Link</span>
                     <span className="font-semibold text-emerald-600">Gratis (Email Otomatis)</span>
                   </div>
                   <div className="flex justify-between text-base font-black text-neutral-950 pt-2 border-t border-neutral-200">
                     <span>Estimasi Total</span>
-                    <span>{formatRupiah(baseAmount)}</span>
+                    <span>{formatRupiah(finalTotalAmount)}</span>
                   </div>
                 </div>
 
@@ -550,11 +710,35 @@ export default function CheckoutClient() {
                     Bisa di-scan dari aplikasi DANA, GoPay, OVO, ShopeePay, BCA, Mandiri, BRI, & semua e-wallet
                   </span>
                 </div>
+
+                {/* Tombol Unduh Foto QRIS */}
+                <div className="mt-4 flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={handleDownloadQris}
+                    disabled={downloadingQris}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-98 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+                  >
+                    {downloadingQris ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    ) : downloadQrisSuccess ? (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <Download className="w-4 h-4 text-emerald-400" />
+                    )}
+                    <span>
+                      {downloadQrisSuccess ? "Foto QRIS Berhasil Diunduh!" : "Unduh Foto QRIS (Simpan ke HP)"}
+                    </span>
+                  </button>
+                  <p className="text-[11px] text-slate-500 mt-2 text-center max-w-sm">
+                    💡 <strong>Tidak perlu screenshot:</strong> Klik tombol di atas untuk simpan gambar QRIS ke galeri, lalu buka m-Banking/E-Wallet &gt; pilih menu <strong>Scan dari Galeri</strong>.
+                  </p>
+                </div>
               </div>
 
               {/* Notice */}
               <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 text-left mb-6 leading-relaxed">
-                ℹ️ <strong>Setelah Transfer:</strong> Klik tombol <strong>"Saya Sudah Bayar"</strong> di bawah. Admin akan langsung mengecek dan meng-ACC pesanan Anda. Begitu di-ACC, link aktivasi otomatis langsung masuk ke email Anda.
+                ℹ️ <strong>Setelah Transfer:</strong> Klik tombol <strong>"Saya Sudah Bayar"</strong> di bawah. Data pesanan Anda akan langsung otomatis terkirim dan muncul di antrean Dashboard Admin untuk di-ACC tanpa harus chat manual.
               </div>
 
               {/* Action Buttons */}
@@ -567,12 +751,12 @@ export default function CheckoutClient() {
                   {isConfirmingToAdmin ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Melaporkan ke Admin...</span>
+                      <span>Mengirim Data ke Antrean Admin...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>Saya Sudah Bayar (Konfirmasi ke Admin)</span>
+                      <span>Saya Sudah Bayar (Kirim ke Dashboard Admin)</span>
                     </>
                   )}
                 </button>
@@ -592,25 +776,41 @@ export default function CheckoutClient() {
         {step === "waiting" && currentOrder && (
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-3xl p-6 sm:p-10 border border-neutral-200/80 shadow-xl text-center animate-in zoom-in-95 duration-300">
-              <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-9 h-9 animate-pulse" />
+              {/* Green Success Confirmation Pill */}
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-extrabold mb-4">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
+                <span>Data Pesanan Berhasil Masuk ke Antrean Admin!</span>
               </div>
 
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                Menunggu Konfirmasi Admin
-              </span>
-
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-950 mt-3 mb-2">
-                Pembayaran Anda Sedang Dicek Admin
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-950 mb-2">
+                Pembayaran Sedang Diverifikasi Admin
               </h2>
 
-              <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto mb-6 leading-relaxed">
-                Terima kasih, <strong>{name}</strong>! Laporan pembayaran untuk Order <strong>#{currentOrder.orderId}</strong> telah masuk ke antrean Admin.
+              <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto mb-5 leading-relaxed">
+                Terima kasih, <strong>{name}</strong>! Laporan pembayaran untuk Order <strong>#{currentOrder.orderId}</strong> sudah otomatis diterima di <strong>Dashboard Admin Lapak Digitara</strong>.
                 <br /><br />
-                <span className="text-emerald-700 font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 inline-block">
+                <span className="text-emerald-800 font-semibold bg-emerald-50 px-3.5 py-2 rounded-xl border border-emerald-200 inline-block">
                   ⚡ Begitu Admin meng-ACC, link aktivasi akan otomatis masuk ke email Anda: <strong>{email}</strong>
                 </span>
               </p>
+
+              {/* No WA Required Clarification Callout */}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-xs text-slate-700 text-left mb-6 leading-relaxed flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-slate-900 font-bold mb-0.5">Tidak Wajib Chat WhatsApp:</strong>
+                  Data Anda sudah langsung terdata di antrean admin. Anda tidak perlu mengirim chat WhatsApp kecuali jika Anda ingin melampirkan foto struk transfer manual.
+                </div>
+              </div>
+
+              {/* Spam notice banner */}
+              <div className="bg-amber-50/90 border border-amber-200/90 p-4 rounded-2xl text-xs text-amber-900 text-left mb-6 leading-relaxed flex items-start gap-2.5">
+                <Mail className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold mb-0.5">Penting Mengenai Email Aktivasi:</strong>
+                  Setelah Admin meng-ACC pembayaran, link aktivasi akan otomatis masuk ke <strong>{email}</strong>. Jika email belum masuk di Kotak Masuk (Inbox) utama Anda, mohon pastikan untuk memeriksa folder <strong>Spam</strong> atau <strong>Promosi</strong>.
+                </div>
+              </div>
 
               {/* Auto polling loader */}
               <div className="flex items-center justify-center gap-2 text-xs font-bold text-neutral-500 mb-6 bg-neutral-50 py-3 px-4 rounded-2xl border border-neutral-200/70 max-w-md mx-auto">
@@ -618,7 +818,7 @@ export default function CheckoutClient() {
                 <span>Halaman ini akan otomatis beralih setelah di-ACC...</span>
               </div>
 
-              {/* Direct WhatsApp Confirmation Button */}
+              {/* Action Buttons: WhatsApp as optional */}
               <div className="space-y-3">
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
@@ -626,18 +826,25 @@ export default function CheckoutClient() {
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors flex items-center justify-center gap-2 border border-slate-200"
                 >
-                  <MessageCircle className="w-5 h-5 fill-white/20" />
-                  <span>Kirim Bukti Pembayaran via WhatsApp Admin</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Kirim Bukti Foto via WhatsApp Admin (Opsional)</span>
                 </a>
+
+                <Link
+                  href="/riwayat"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white font-extrabold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <History className="w-4 h-4 text-emerald-400" />
+                  <span>Cek Riwayat Pesanan Saya (Status Tersimpan)</span>
+                </Link>
 
                 <Link
                   href="/"
                   className="w-full py-2.5 text-xs text-neutral-500 hover:text-neutral-800 transition-colors font-medium block text-center"
                 >
-                  Kembali ke Beranda (Status tetap tersimpan)
+                  Kembali ke Beranda
                 </Link>
               </div>
             </div>
@@ -660,13 +867,24 @@ export default function CheckoutClient() {
                 Link Aktivasi Telah Dikirim ke Email!
               </h2>
 
-              <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto mb-6">
+              <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto mb-5">
                 Admin telah mengonfirmasi pembayaran Anda sebesar <strong>{formatRupiah(currentOrder.totalAmount)}</strong>. Rincian lisensi dan link aktivasi resmi telah masuk ke kotak masuk:
                 <br />
                 <strong className="text-neutral-950 text-sm font-bold bg-neutral-100 px-2.5 py-0.5 rounded-md inline-block mt-1">
                   {email}
                 </strong>
               </p>
+
+              {/* Highlighted Spam Notice Callout */}
+              <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-xs text-amber-950 text-left mb-6 flex items-start gap-3 shadow-xs">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong className="block text-xs sm:text-sm font-black text-amber-900 mb-0.5">
+                    ⚠️ CEK FOLDER SPAM JIKA EMAIL BELUM MASUK INBOX:
+                  </strong>
+                  Email aktivasi resmi otomatis dikirimkan ke <strong>{email}</strong>. Jika belum muncul di Kotak Masuk utama, harap <strong>segera periksa folder SPAM atau PROMOSI</strong> pada akun email Anda. Anda juga bisa langsung membuka link aktivasi di bawah ini.
+                </div>
+              </div>
 
               {/* Activation Link Box */}
               <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-neutral-950 to-neutral-900 text-white text-left mb-6 shadow-md border border-neutral-800">
@@ -733,15 +951,23 @@ export default function CheckoutClient() {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/riwayat"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <History className="w-4 h-4" />
+                  <span>Lihat Riwayat Pesanan</span>
+                </Link>
+
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
                     `Halo Admin Lapak Digitara, pesanan saya untuk Order #${currentOrder.orderId} atas nama ${name} sudah selesai. Terima kasih banyak!`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
                 >
-                  <span>Hubungi WhatsApp Admin</span>
+                  <span>Hubungi WhatsApp</span>
                   <ArrowRight className="w-4 h-4" />
                 </a>
 

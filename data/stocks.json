@@ -1,5 +1,13 @@
 [
   {
+    "id": "STK-MU5E68UG-1-4071",
+    "productId": "chatgpt-plus",
+    "productName": "ChatGPT Plus",
+    "activationLink": "http://localhost:3000/product/gemini-pro",
+    "status": "AVAILABLE",
+    "createdAt": "2026-09-17T10:33:37.096Z"
+  },
+  {
     "id": "STK-MU2QJKXC-1-5138",
     "productId": "gemini-pro",
     "productName": "Google Gemini Pro",

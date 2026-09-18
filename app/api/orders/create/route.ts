@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOrder, OrderItem } from "@/lib/orders";
-import { products } from "@/data/products";
+import { getMergedProducts } from "@/lib/pricing";
+import { getDiscountByCode, calculateDiscountAmount, recordDiscountUsage } from "@/lib/discounts";
 
 // Helper validasi email sederhana
 function isValidEmail(email: string): boolean {
@@ -11,7 +12,7 @@ function isValidEmail(email: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { buyerName, buyerEmail, buyerWhatsapp, items } = body;
+    const { buyerName, buyerEmail, buyerWhatsapp, items, discountCode } = body;
 
     // Validasi data pembeli
     if (!buyerEmail || typeof buyerEmail !== "string" || !isValidEmail(buyerEmail.trim())) {
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const currentCatalog = await getMergedProducts();
     const validatedItems: OrderItem[] = [];
     let calculatedBaseAmount = 0;
 
@@ -54,11 +56,18 @@ export async function POST(req: NextRequest) {
       if (!item || typeof item !== "object") continue;
 
       const productId = String(item.id || "");
-      const productCatalog = products.find((p) => p.id === productId);
+      const productCatalog = currentCatalog.find((p) => p.id === productId);
 
       if (!productCatalog) {
         return NextResponse.json(
           { error: `Produk dengan ID "${productId}" tidak valid atau sudah tidak tersedia.` },
+          { status: 400 }
+        );
+      }
+
+      if (productCatalog.isAvailable === false) {
+        return NextResponse.json(
+          { error: `Produk "${productCatalog.name}" sedang habis stok.` },
           { status: 400 }
         );
       }
@@ -85,6 +94,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validasi kupon diskon jika ada
+    let discountAmount = 0;
+    let appliedDiscountCode: string | undefined = undefined;
+
+    if (discountCode && typeof discountCode === "string" && discountCode.trim()) {
+      const discount = await getDiscountByCode(discountCode.trim());
+      if (discount) {
+        const check = calculateDiscountAmount(discount, calculatedBaseAmount);
+        if (check.isValid) {
+          discountAmount = check.discountAmount;
+          appliedDiscountCode = discount.code;
+          await recordDiscountUsage(discount.code);
+        }
+      }
+    }
+
     // Buat pesanan baru dengan harga terverifikasi server & hanya metode QRIS
     const newOrder = await createOrder({
       buyerName: cleanName,
@@ -93,11 +118,13 @@ export async function POST(req: NextRequest) {
       items: validatedItems,
       baseAmount: calculatedBaseAmount,
       paymentMethod: "qris",
+      discountAmount,
     });
 
     return NextResponse.json({
       success: true,
       order: newOrder,
+      discountApplied: appliedDiscountCode ? { code: appliedDiscountCode, amount: discountAmount } : undefined,
     });
   } catch (err: unknown) {
     console.error("Error creating order:", err);

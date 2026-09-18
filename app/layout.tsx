@@ -8,9 +8,12 @@ export const metadata: Metadata = {
   title: "Lapak Digitara - Akun AI & Layanan Digital Premium",
   description: "Beli Google Gemini Pro, ChatGPT Plus, Duolingo Super, dan layanan digital premium terpercaya.",
   icons: {
-    icon: "/images/logo13.png",
-    shortcut: "/images/logo13.png",
-    apple: "/images/logo13.png",
+    icon: [
+      { url: "/images/logo13.png?v=2", type: "image/png" },
+      { url: "/icon.png?v=2", type: "image/png" },
+    ],
+    shortcut: "/images/logo13.png?v=2",
+    apple: "/images/logo13.png?v=2",
   },
   openGraph: {
     title: "Lapak Digitara - Akun AI & Layanan Digital Premium",

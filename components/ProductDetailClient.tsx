@@ -204,9 +204,21 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             {/* Price Box */}
             <div className="p-5 rounded-2xl bg-neutral-50/90 border border-neutral-200/80 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-xs text-neutral-400 font-medium block mb-0.5">
-                  Harga Spesial
-                </span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-neutral-400 font-medium">
+                    Harga Spesial
+                  </span>
+                  {(product as any).originalPrice && (product as any).originalPrice > product.price && (
+                    <span className="text-xs text-neutral-400 line-through">
+                      {formatRupiah((product as any).originalPrice)}
+                    </span>
+                  )}
+                  {(product as any).discountPercent && (
+                    <span className="text-[10px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200/60 px-2 py-0.5 rounded-full">
+                      Hemat {(product as any).discountPercent}%
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-950">
                     {formatRupiah(product.price)}

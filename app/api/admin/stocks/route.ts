@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAllStocks, getStockSummary, addStockItems } from "@/lib/stocks";
 import { isAuthenticatedAdmin } from "@/lib/auth";
 import { products } from "@/data/products";
+import { getMergedProducts } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -30,18 +31,24 @@ export async function GET(req: NextRequest) {
       filtered = filtered.filter((s) => s.status === status);
     }
 
+    const mergedProds = await getMergedProducts();
+
     return NextResponse.json({
       success: true,
       stocks: filtered,
       totalCount: allStocks.length,
       summary,
-      products: products.map((p) => ({
+      products: mergedProds.map((p) => ({
         id: p.id,
         name: p.name,
         category: p.category,
         price: p.price,
+        originalPrice: p.originalPrice,
+        discountPercent: p.discountPercent,
         duration: p.duration,
         image: p.image,
+        isAvailable: p.isAvailable,
+        priceNote: p.priceNote,
       })),
     });
   } catch (err) {

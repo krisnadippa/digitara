@@ -1,0 +1,10 @@
+{
+  "gemini-pro": {
+    "productId": "gemini-pro",
+    "price": 50000,
+    "originalPrice": 65000,
+    "priceNote": "per link aktivasi",
+    "isAvailable": true,
+    "updatedAt": "2026-09-17T10:32:59.989Z"
+  }
+}

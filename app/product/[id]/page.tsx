@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { products, getProductById } from "@/data/products";
+import { products } from "@/data/products";
+import { getProductWithPricing } from "@/lib/pricing";
 import ProductDetailClient from "@/components/ProductDetailClient";
 import Navbar from "@/components/Navbar";
 
@@ -15,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = await getProductWithPricing(id);
   if (!product) {
     return {
       title: "Produk Tidak Ditemukan - Lapak Digitara",
@@ -34,7 +35,7 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = await getProductWithPricing(id);
 
   if (!product) {
     notFound();

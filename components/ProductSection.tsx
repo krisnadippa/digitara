@@ -9,20 +9,35 @@ import { useCart } from "@/context/CartContext";
 import { products, Product } from "@/data/products";
 import { getClientStockSummary } from "@/lib/clientStock";
 
+export type ExtendedProduct = Product & { originalPrice?: number; discountPercent?: number };
+
 export default function ProductSection() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<"all" | "ready" | "out">("all");
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  const [productList, setProductList] = useState<ExtendedProduct[]>(products);
   const [stockSummary, setStockSummary] = useState<Record<string, { available: number; used: number; total: number }>>({});
 
   const { addToCart } = useCart();
 
-  // Fetch real-time stock summary with client cache
+  // Fetch real-time products with pricing & stock summary
   useEffect(() => {
     let isMounted = true;
-    getClientStockSummary().then((summary) => {
-      if (isMounted) setStockSummary(summary);
-    });
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && Array.isArray(data.products)) {
+          setProductList(data.products);
+        }
+        if (data.stockSummary) {
+          setStockSummary(data.stockSummary);
+        }
+      })
+      .catch((err) => {
+        console.error("Gagal memuat produk dinamis:", err);
+      });
+
     return () => {
       isMounted = false;
     };
@@ -32,11 +47,11 @@ export default function ProductSection() {
     return stockSummary[productId]?.available || 0;
   };
 
-  const isProductInStock = (product: Product): boolean => {
+  const isProductInStock = (product: ExtendedProduct): boolean => {
     return (stockSummary[product.id]?.available || 0) > 0;
   };
 
-  const handleAddToCart = (product: Product, e?: React.MouseEvent) => {
+  const handleAddToCart = (product: ExtendedProduct, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!isProductInStock(product)) return;
 
@@ -53,7 +68,7 @@ export default function ProductSection() {
     }, 1400);
   };
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = productList.filter((p) => {
     const inStock = isProductInStock(p);
     if (activeFilter === "ready") return inStock;
     if (activeFilter === "out") return !inStock;
@@ -203,6 +218,18 @@ export default function ProductSection() {
                 <div className="pt-2.5 sm:pt-3 border-t border-neutral-200/60">
                   <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mb-2 sm:mb-3">
                     <div>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-[10px] sm:text-xs text-neutral-400 line-through">
+                            {formatRupiah(product.originalPrice)}
+                          </span>
+                          {product.discountPercent && (
+                            <span className="text-[9px] sm:text-[10px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200/60 px-1.5 py-0.5 rounded-md">
+                              Hemat {product.discountPercent}%
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <span className="text-[10px] sm:text-xs text-neutral-400 block font-medium hidden sm:block">
                         Harga
                       </span>
